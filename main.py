@@ -1,6 +1,7 @@
-"""Entry point for the BASIC_CALCULATOR application."""
-
 from app.calculator import Calculator
 
 if __name__ == "__main__":
-    Calculator.run()
+    try:
+        Calculator.run()
+    except Exception as e:
+        print(f"An error occurred: {e}")

@@ -45,3 +45,5 @@ def test_divide_by_zero():
     """Test dividing by zero raises ZeroDivisionError."""
     with pytest.raises(ZeroDivisionError, match="Cannot divide by zero."):
         Operations.divide(5, 0)
+
+        
