@@ -1,5 +1,7 @@
 # Basic Calculator
 
+-- Added faker to the [basic_calculator](https://github.com/JaswanthKSnjit/basic_calculator) project.
+
 ## Setup Instructions
 
 1. Clone Repo: <code> git clone git@github.com:JaswanthKSnjit/basic_calculator.git </code>
