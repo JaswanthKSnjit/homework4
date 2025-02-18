@@ -142,6 +142,11 @@ class Calculator:
             "multiply": Operations.multiply,
             "division": Operations.divide,
         }
+
+        # Check if the operation is valid BEFORE attempting to use the map
+        if operation not in operation_map:
+            raise ValueError(f"Unsupported operation: {operation}")
+
         try:
             return operation_map[operation](num1, num2)
         except ZeroDivisionError:

@@ -1,9 +1,13 @@
-"""Tests for the numeric-based calculator's REPL functionality."""
-
+import pytest
 import sys
-from io import StringIO  # <-- Standard library imports first
+from io import StringIO
+from app.calculator import Calculator
 
-from app.calculator import Calculator  # <-- Local imports last
+
+@pytest.fixture(autouse=True)
+def clear_calculator_history():
+    """Ensure calculator history is cleared before each test."""
+    Calculator.clear_history()
 
 
 def simulate_calculator(monkeypatch, inputs):
@@ -11,11 +15,11 @@ def simulate_calculator(monkeypatch, inputs):
     Helper function to simulate user input for the calculator REPL.
 
     Args:
-        monkeypatch (pytest.MonkeyPatch): Pytest fixture to override input().
+        monkeypatch: Pytest fixture to override input().
         inputs (list[str]): A list of strings to feed as user input.
 
     Returns:
-        str: The captured output from the REPL session.
+        str: Captured output from the REPL session.
     """
     input_iter = iter(inputs)
     monkeypatch.setattr("builtins.input", lambda _: next(input_iter))
@@ -52,68 +56,110 @@ def test_multiplication(monkeypatch):
     assert "The result is: 6.0" in output
 
 
+def test_division(monkeypatch):
+    """Test that '4' performs division."""
+    output = simulate_calculator(monkeypatch, ["4", "8", "2", "7"])
+    assert "The result is: 4.0" in output
+
+
 def test_division_by_zero(monkeypatch):
-    """Test that '4' with zero triggers zero-division error."""
-    output = simulate_calculator(monkeypatch, ["4", "5", "0", "7"])
+    """Test division by zero handling."""
+    output = simulate_calculator(monkeypatch, ["4", "8", "0", "7"])
     assert "Cannot divide by zero." in output
 
 
 def test_invalid_number_input(monkeypatch):
     """Test entering a non-numeric value triggers invalid number message."""
-    output = simulate_calculator(monkeypatch, ["1", "abc", "2", "3", "7"])
-    assert "Invalid number" in output
+    output = simulate_calculator(monkeypatch, ["1", "abc", "3", "7"])
+    assert "Invalid number. Please enter numeric values." in output
+
+
+def test_quit_during_number_input(monkeypatch):
+    """Test typing 'quit' during number input."""
+    output = simulate_calculator(monkeypatch, ["1", "quit"])
+    assert "Exiting calculator. Goodbye!" in output
+
+
+def test_invalid_choice(monkeypatch):
+    """Test an unrecognized menu choice prints an error."""
+    output = simulate_calculator(monkeypatch, ["99", "7"])
+    assert "Invalid choice. Please enter a number from 1 to 7." in output
 
 
 def test_history(monkeypatch):
-    """Test that '5' shows the calculation history."""
-    output = simulate_calculator(monkeypatch, ["1", "1", "1", "5", "7"])
-    assert "1.0 addition 1.0 = 2.0" in output
+    """Test viewing history when empty."""
+    output = simulate_calculator(monkeypatch, ["5", "7"])
+    assert "No calculations recorded." in output
 
 
 def test_clear_history_via_repl(monkeypatch):
-    """Test that '6' clears the history."""
+    """Test clearing history via the REPL."""
     output = simulate_calculator(monkeypatch, ["6", "7"])
     assert "History has been cleared." in output
 
 
+def test_stoptest_command(monkeypatch):
+    """Test the hidden '8' command for coverage."""
+    output = simulate_calculator(monkeypatch, ["8"])
+    assert "Testing coverage for final line." in output
+
+
+def test_history_after_addition(monkeypatch):
+    """Test that history is updated after an addition operation."""
+    output = simulate_calculator(monkeypatch, ["1", "3", "2", "5", "7"])
+    assert "3.0 addition 2.0 = 5.0" in output
+
+
 def test_clear_history_direct(capsys):
-    """Test calling clear_history() directly."""
+    """Test clearing history directly."""
     Calculator.clear_history()
     captured = capsys.readouterr()
     assert "History has been cleared." in captured.out
 
 
-def test_quit_during_number_input(monkeypatch):
-    """Test typing 'quit' as the second number."""
-    output = simulate_calculator(monkeypatch, ["1", "5", "quit"])
-    assert "Exiting calculator. Goodbye!" in output
-
-
-def test_invalid_command(monkeypatch):
-    """Test an unrecognized command prints invalid choice."""
-    output = simulate_calculator(monkeypatch, ["999", "7"])
-    assert "Invalid choice" in output
-
-
-def test_compute_divide_by_zero_direct():
-    """Directly test compute() with zero divisor."""
-    result = Calculator.compute("division", 5, 0)
-    assert result is None
-
-
-def test_stoptest_command(monkeypatch):
-    """Test hidden '8' command for coverage final line."""
-    output = simulate_calculator(monkeypatch, ["8"])
-    assert "Testing coverage for final line." in output
-
-
 def test_quit_as_first_number(monkeypatch):
-    """Test typing 'quit' as first number."""
+    """Test typing 'quit' as the first number input."""
     output = simulate_calculator(monkeypatch, ["1", "quit"])
     assert "Exiting calculator. Goodbye!" in output
 
 
-def test_empty_history(monkeypatch):
-    """Test that '5' shows 'No calculations recorded.' when history is empty."""
-    output = simulate_calculator(monkeypatch, ["5", "7"])
+def test_clear_history_then_check(monkeypatch):
+    """Test clearing history and checking it's empty."""
+    output = simulate_calculator(monkeypatch, ["6", "5", "7"])
+    assert "History has been cleared." in output
     assert "No calculations recorded." in output
+
+
+# ===================== TESTS TO COVER LINE 119, 177, 199 ======================
+
+def test_get_inputs_first_number_quit(monkeypatch):
+    """Covers the case when the user types 'quit' as the first number input."""
+    inputs = iter(["quit"])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    num1, num2 = Calculator.get_inputs()
+    assert num1 is None
+    assert num2 is None
+
+
+def test_get_inputs_second_number_quit(monkeypatch):
+    """Covers line 119: Returning None, None when 'quit' is entered as the second number."""
+    inputs = iter(["5", "quit"])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    num1, num2 = Calculator.get_inputs()
+    assert num1 is None
+    assert num2 is None
+
+
+def test_get_inputs_invalid(monkeypatch):
+    """Covers the case when invalid input is provided for number entry."""
+    inputs = iter(["abc", "quit"])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    num1, num2 = Calculator.get_inputs()
+    assert num1 is None
+    assert num2 is None
+
+
+def test_compute_invalid_operation():
+    """Covers line 177: Raises ValueError for unsupported operations."""
+    with pytest.raises(ValueError, match="Unsupported operation: unknown"):
+        Calculator.compute("unknown", 5, 3)
